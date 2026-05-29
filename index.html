@@ -3,54 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Simulateur Rentabilité & Vacance</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
-        /* Sécurité pour masquer les variables brutes avant le chargement total du script */
-        [x-cloak] { display: none !important; }
-        
-        /* Adaptations iOS */
         input[type="range"] { accent-color: #3b82f6; }
         .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased font-sans pb-10" x-data="simulateur()" x-cloak>
+<body class="bg-gray-50 text-gray-800 antialiased font-sans pb-10">
 
     <div class="bg-blue-900 text-white shadow-md sticky top-0 z-50 tap-highlight-transparent">
         <div class="p-4 flex justify-between items-center">
             <h1 class="text-xl font-bold tracking-tight">Analyse Financière</h1>
         </div>
         <div class="flex border-t border-blue-800">
-            <button @click="tab = 'tresorerie'" 
-                    :class="{'border-b-4 border-blue-400 bg-blue-800': tab === 'tresorerie'}"
-                    class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider">
-                Trésorerie
-            </button>
-            <button @click="tab = 'vacance'" 
-                    :class="{'border-b-4 border-blue-400 bg-blue-800': tab === 'vacance'}"
-                    class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider">
-                Vacances
-            </button>
+            <button onclick="switchTab('tresorerie')" id="btn-tresorerie" class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider border-b-4 border-blue-400 bg-blue-800">Trésorerie</button>
+            <button onclick="switchTab('vacance')" id="btn-vacance" class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider border-b-4 border-transparent">Vacances</button>
         </div>
     </div>
 
     <div class="p-4 max-w-lg mx-auto">
         
-        <div x-show="tab === 'tresorerie'" x-transition.opacity>
+        <div id="tab-tresorerie">
             
             <div class="bg-white rounded-2xl shadow-lg p-5 mb-6 border border-gray-100">
                 <h2 class="text-gray-500 text-sm font-semibold uppercase mb-1">Cash-Flow Net Annuel</h2>
-                <div class="text-3xl font-extrabold" :class="cashFlow >= 0 ? 'text-green-600' : 'text-red-500'" x-text="formatCurrency(cashFlow)"></div>
+                <div id="out-cashflow" class="text-3xl font-extrabold text-green-600">0 €</div>
                 
                 <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Point Mort (CA)</div>
-                        <div class="font-bold text-gray-800" x-text="formatCurrency(pointMort)"></div>
+                        <div id="out-pointmort" class="font-bold text-gray-800">0 €</div>
                     </div>
                     <div>
                         <div class="text-xs text-gray-500 uppercase">Mensualité Prêt</div>
-                        <div class="font-bold text-gray-800" x-text="formatCurrency(mensualite)"></div>
+                        <div id="out-mensualite" class="font-bold text-gray-800">0 €</div>
                     </div>
                 </div>
             </div>
@@ -58,31 +46,205 @@
             <div class="space-y-4">
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Prix d'acquisition (€)</label>
-                    <input type="number" inputmode="numeric" x-model.number="prix" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <input type="number" inputmode="numeric" id="in-prix" value="864000" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Apport (€)</label>
-                        <input type="number" inputmode="numeric" x-model.number="apport" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="number" inputmode="numeric" id="in-apport" value="64000" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Emprunt (€)</label>
-                        <div class="w-full bg-gray-100 border border-gray-200 rounded-lg p-3 text-lg text-gray-500 font-semibold" x-text="formatCurrency(emprunt)"></div>
+                        <div id="out-emprunt" class="w-full bg-gray-100 border border-gray-200 rounded-lg p-3 text-lg text-gray-500 font-semibold">0 €</div>
                     </div>
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Taux (%)</label>
-                        <input type="number" inputmode="decimal" step="0.1" x-model.number="taux" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="number" inputmode="decimal" step="0.1" id="in-taux" value="4.0" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Durée (ans)</label>
-                        <input type="number" inputmode="numeric" x-model.number="duree" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="number" inputmode="numeric" id="in-duree" value="20" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
                     <label class="block text-sm font-medium text-gray-700 mb-1">CA Annuel Global (€)</label>
-                    <input type
+                    <input type="number" inputmode="numeric" id="in-ca" value="100000" class="w-full bg-green-50 border border-green-200 rounded-lg p-3 text-lg font-bold text-green-700 focus:ring-2 focus:ring-green-500 outline-none">
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 border-l-4 border-l-red-400">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-3">Détail des charges annuelles</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm text-gray-600 flex-1">Frais de gestion</label>
+                            <input type="number" inputmode="numeric" id="in-ch-gestion" value="9500" class="w-1/2 bg-gray-50 border border-gray-200 rounded-md p-2 text-right focus:ring-1 focus:ring-red-400 outline-none">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm text-gray-600 flex-1">Entretien & Rép.</label>
+                            <input type="number" inputmode="numeric" id="in-ch-entretien" value="8600" class="w-1/2 bg-gray-50 border border-gray-200 rounded-md p-2 text-right focus:ring-1 focus:ring-red-400 outline-none">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm text-gray-600 flex-1">Impôts locaux</label>
+                            <input type="number" inputmode="numeric" id="in-ch-impots" value="1700" class="w-1/2 bg-gray-50 border border-gray-200 rounded-md p-2 text-right focus:ring-1 focus:ring-red-400 outline-none">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm text-gray-600 flex-1">Assurance</label>
+                            <input type="number" inputmode="numeric" id="in-ch-assurance" value="800" class="w-1/2 bg-gray-50 border border-gray-200 rounded-md p-2 text-right focus:ring-1 focus:ring-red-400 outline-none">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm text-gray-600 flex-1">Autres</label>
+                            <input type="number" inputmode="numeric" id="in-ch-autres" value="0" class="w-1/2 bg-gray-50 border border-gray-200 rounded-md p-2 text-right focus:ring-1 focus:ring-red-400 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+                        <span class="font-bold text-gray-800">TOTAL CHARGES</span>
+                        <span id="out-charges" class="text-lg font-bold text-red-600">0 €</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-vacance" style="display: none;">
+            <div class="bg-white rounded-2xl shadow-lg p-5 mb-6 border border-gray-100 sticky top-16 z-40">
+                <h2 class="text-gray-500 text-sm font-semibold uppercase mb-1">CA Annuel Simulé</h2>
+                <div id="out-ca-simule" class="text-3xl font-extrabold text-blue-600">0 €</div>
+                <div class="text-sm font-medium mt-1 text-gray-500">
+                    CA Mensuel : <span id="out-ca-mensuel">0 €</span>
+                </div>
+                <button onclick="injecterCA()" class="mt-4 w-full bg-blue-100 text-blue-700 font-semibold py-2 rounded-lg active:bg-blue-200">
+                    Utiliser ce CA pour la trésorerie
+                </button>
+            </div>
+
+            <div id="boxes-container" class="space-y-3">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const formatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+
+        const boxes = [
+            { surface: 2, total: 2, loues: 2, prix: 45 },
+            { surface: 5, total: 6, loues: 5, prix: 100 },
+            { surface: 6, total: 5, loues: 4, prix: 100 },
+            { surface: 8, total: 7, loues: 6, prix: 120 },
+            { surface: 12, total: 20, loues: 17, prix: 140 },
+            { surface: 15, total: 8, loues: 7, prix: 160 },
+            { surface: 18, total: 19, loues: 16, prix: 180 },
+            { surface: 20, total: 1, loues: 1, prix: 200 }
+        ];
+
+        // Raccourci sécurisé pour lire la valeur d'une case
+        function val(id) {
+            return Number(document.getElementById(id).value) || 0;
+        }
+
+        // Création de l'onglet Vacance
+        function initBoxes() {
+            const container = document.getElementById('boxes-container');
+            container.innerHTML = '';
+            boxes.forEach((box, i) => {
+                container.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-bold text-gray-800">Box ${box.surface} m² <span class="text-xs text-gray-500 ml-1">(${box.total} unités)</span></div>
+                            <div class="text-sm font-semibold text-gray-600">${box.prix} € / mois</div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <input type="range" min="0" max="${box.total}" value="${box.loues}" class="flex-1 h-2 bg-gray-200 rounded-lg cursor-pointer" oninput="updateBox(${i}, this.value)">
+                            <div class="w-16 text-right font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                <span id="label-${i}">${box.loues}</span>/${box.total}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateBox(index, value) {
+            boxes[index].loues = Number(value);
+            document.getElementById(`label-${index}`).innerText = value;
+            calculer();
+        }
+
+        // Calcul général en temps réel
+        function calculer() {
+            const emprunt = Math.max(0, val('in-prix') - val('in-apport'));
+            const taux = val('in-taux');
+            const duree = val('in-duree');
+            const ca = val('in-ca');
+
+            const totalCharges = val('in-ch-gestion') + val('in-ch-entretien') + val('in-ch-impots') + val('in-ch-assurance') + val('in-ch-autres');
+
+            let mensualite = 0;
+            if (emprunt > 0 && taux > 0 && duree > 0) {
+                const tauxMensuel = (taux / 100) / 12;
+                const nombreMois = duree * 12;
+                mensualite = (emprunt * tauxMensuel) / (1 - Math.pow(1 + tauxMensuel, -nombreMois));
+            }
+
+            const annuite = mensualite * 12;
+            const cashFlow = ca - totalCharges - annuite;
+            const pointMort = totalCharges + annuite;
+
+            document.getElementById('out-emprunt').innerText = formatter.format(emprunt);
+            document.getElementById('out-charges').innerText = formatter.format(totalCharges);
+            document.getElementById('out-mensualite').innerText = formatter.format(mensualite);
+            document.getElementById('out-pointmort').innerText = formatter.format(pointMort);
+            
+            const cfElement = document.getElementById('out-cashflow');
+            cfElement.innerText = formatter.format(cashFlow);
+            cfElement.className = cashFlow >= 0 ? 'text-3xl font-extrabold text-green-600' : 'text-3xl font-extrabold text-red-500';
+
+            let mensuelSimule = 0;
+            boxes.forEach(b => { mensuelSimule += (b.loues * b.prix); });
+            
+            document.getElementById('out-ca-mensuel').innerText = formatter.format(mensuelSimule);
+            document.getElementById('out-ca-simule').innerText = formatter.format(mensuelSimule * 12);
+        }
+
+        // Action du bouton
+        function injecterCA() {
+            let mensuelSimule = 0;
+            boxes.forEach(b => { mensuelSimule += (b.loues * b.prix); });
+            document.getElementById('in-ca').value = mensuelSimule * 12;
+            switchTab('tresorerie');
+            calculer();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Gestion des onglets
+        function switchTab(tab) {
+            const btnTreso = document.getElementById('btn-tresorerie');
+            const btnVac = document.getElementById('btn-vacance');
+            const viewTreso = document.getElementById('tab-tresorerie');
+            const viewVac = document.getElementById('tab-vacance');
+
+            if (tab === 'tresorerie') {
+                viewTreso.style.display = 'block'; viewVac.style.display = 'none';
+                btnTreso.classList.replace('border-transparent', 'border-blue-400'); btnTreso.classList.add('bg-blue-800');
+                btnVac.classList.replace('border-blue-400', 'border-transparent'); btnVac.classList.remove('bg-blue-800');
+            } else {
+                viewTreso.style.display = 'none'; viewVac.style.display = 'block';
+                btnVac.classList.replace('border-transparent', 'border-blue-400'); btnVac.classList.add('bg-blue-800');
+                btnTreso.classList.replace('border-blue-400', 'border-transparent'); btnTreso.classList.remove('bg-blue-800');
+            }
+        }
+
+        // Lancement : on écoute les changements sur toutes les cases
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', calculer);
+        });
+
+        initBoxes();
+        calculer();
+    </script>
+</body>
+</html>
