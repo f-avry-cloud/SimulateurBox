@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulateur Rentabilité & Vacance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* Adaptations spécifiques pour iOS */
+        input[type="range"] {
+            accent-color: #3b82f6;
+        }
+        .tap-highlight-transparent {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased font-sans pb-10"
+      x-data="simulateur()">
+
+    <div class="bg-blue-900 text-white shadow-md sticky top-0 z-50 tap-highlight-transparent">
+        <div class="p-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-tight">Analyse Financière</h1>
+        </div>
+        <div class="flex border-t border-blue-800">
+            <button @click="tab = 'tresorerie'" 
+                    :class="{'border-b-4 border-blue-400 bg-blue-800': tab === 'tresorerie'}"
+                    class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider">
+                Trésorerie
+            </button>
+            <button @click="tab = 'vacance'" 
+                    :class="{'border-b-4 border-blue-400 bg-blue-800': tab === 'vacance'}"
+                    class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider">
+                Vacances
+            </button>
+        </div>
+    </div>
+
+    <div class="p-4 max-w-lg mx-auto">
+        
+        <div x-show="tab === 'tresorerie'" x-transition.opacity>
+            
+            <div class="bg-white rounded-2xl shadow-lg p-5 mb-6 border border-gray-100">
+                <h2 class="text-gray-500 text-sm font-semibold uppercase mb-1">Cash-Flow Net Annuel</h2>
+                <div class="text-3xl font-extrabold" :class="cashFlow >= 0 ? 'text-green-600' : 'text-red-500'" x-text="formatCurrency(cashFlow)"></div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Point Mort (CA)</div>
+                        <div class="font-bold text-gray-800" x-text="formatCurrency(pointMort)"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Mensualité Prêt</div>
+                        <div class="font-bold text-gray-800" x-text="formatCurrency(mensualite)"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix d'acquisition (€)</label>
+                    <input type="number" x-model.number="prix" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Apport (€)</label>
+                        <input type="number" x-model.number="apport" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Emprunt (€)</label>
+                        <div class="w-full bg-gray-100 border border-gray-200 rounded-lg p-3 text-lg text-gray-500 font-semibold" x-text="formatCurrency(emprunt)"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Taux (%)</label>
+                        <input type="number" step="0.1" x-model.number="taux" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Durée (ans)</label>
+                        <input type="number" x-model.number="duree" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">CA Annuel (€)</label>
+                        <input type="number" x-model.number="ca" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Charges Annuelles (€)</label>
+                        <input type="number" x-model.number="charges" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <p class="text-xs text-gray-400 mt-1">Gestion, impôts, entretien</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="tab === 'vacance'" x-transition.opacity style="display: none;">
+            
+            <div class="bg-white rounded-2xl shadow-lg p-5 mb-6 border border-gray-100 sticky top-16 z-40">
+                <h2 class="text-gray-500 text-sm font-semibold uppercase mb-1">CA Annuel Simulé</h2>
+                <div class="text-3xl font-extrabold text-blue-600" x-text="formatCurrency(caSimule)"></div>
+                <div class="text-sm font-medium mt-1 text-gray-500">
+                    CA Mensuel : <span x-text="formatCurrency(caSimule / 12)"></span>
+                </div>
+                
+                <button @click="injecterCA()" class="mt-4 w-full bg-blue-100 text-blue-700 font-semibold py-2 rounded-lg active:bg-blue-200 transition-colors">
+                    Utiliser ce CA pour la trésorerie
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <template x-for="(box, index) in boxes" :key="index">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-bold text-gray-800">
+                                Box <span x-text="box.surface"></span> m² 
+                                <span class="text-xs text-gray-500 font-normal ml-1">(<span x-text="box.total"></span> unités)</span>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-600">
+                                <span x-text="box.prix"></span> € / mois
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <input type="range" min="0" :max="box.total" x-model.number="box.loues" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="w-16 text-right font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                <span x-text="box.loues"></span>/<span x-text="box.total"></span>
+                            </div>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-400 text-right">
+                            <span x-text="Math.round((box.loues / box.total) * 100)"></span>% d'occupation
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function simulateur() {
+            return {
+                tab: 'tresorerie',
+                
+                // Variables Trésorerie
+                prix: 864000,
+                apport: 64000,
+                taux: 4.0,
+                duree: 15,
+                ca: 100000,
+                charges: 19800, // Estimation : Gestion (9500) + Entretien (8600) + Impôts Locaux (1700)
+
+                // Variables Vacance (Parc réparti)
+                boxes: [
+                    { surface: 2, total: 2, loues: 2, prix: 45 },
+                    { surface: 5, total: 6, loues: 5, prix: 100 },
+                    { surface: 6, total: 5, loues: 4, prix: 100 },
+                    { surface: 8, total: 7, loues: 6, prix: 120 },
+                    { surface: 12, total: 20, loues: 17, prix: 140 },
+                    { surface: 15, total: 8, loues: 7, prix: 160 },
+                    { surface: 18, total: 19, loues: 16, prix: 180 },
+                    { surface: 20, total: 1, loues: 1, prix: 200 }
+                ],
+
+                // Calculs Trésorerie
+                get emprunt() {
+                    return Math.max(0, this.prix - this.apport);
+                },
+                get mensualite() {
+                    if (this.emprunt <= 0 || this.taux <= 0 || this.duree <= 0) return 0;
+                    const tauxMensuel = (this.taux / 100) / 12;
+                    const nombreMois = this.duree * 12;
+                    return (this.emprunt * tauxMensuel) / (1 - Math.pow(1 + tauxMensuel, -nombreMois));
+                },
+                get annuite() {
+                    return this.mensualite * 12;
+                },
+                get cashFlow() {
+                    return this.ca - this.charges - this.annuite;
+                },
+                get pointMort() {
+                    return this.charges + this.annuite;
+                },
+
+                // Calculs Vacance
+                get caSimule() {
+                    let mensuel = this.boxes.reduce((acc, box) => {
+                        return acc + (box.loues * box.prix);
+                    }, 0);
+                    return mensuel * 12;
+                },
+
+                // Actions
+                injecterCA() {
+                    this.ca = this.caSimule;
+                    this.tab = 'tresorerie';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
+                // Utilitaires
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
