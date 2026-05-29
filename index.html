@@ -1,62 +1,795 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Simulateur Rentabilité & Vacance</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        input[type="range"] { accent-color: #3b82f6; }
-        .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
-    </style>
-</head>
-<body class="bg-gray-50 text-gray-800 antialiased font-sans pb-10">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>LG Box — Simulateur Trésorerie</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-    <div class="bg-blue-900 text-white shadow-md sticky top-0 z-50 tap-highlight-transparent">
-        <div class="p-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight">Analyse Financière</h1>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['DM Mono', 'monospace'],
+          },
+          colors: {
+            navy:   { DEFAULT: '#0f2044', 50: '#e8edf5', 100: '#c2cedf', 200: '#96abc8', 300: '#6988b1', 400: '#4169a0', 500: '#2a508f', 600: '#1e3d7a', 700: '#152d63', 800: '#0f2044', 900: '#08142c' },
+            slate:  { DEFAULT: '#4a5568' },
+            emerald:{ DEFAULT: '#10b981', soft: '#d1fae5', strong: '#059669' },
+            coral:  { DEFAULT: '#f05c54', soft: '#fee2e0', strong: '#c0392b' },
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── Base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f0f4f9;
+      color: #1a2a40;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    /* Prevent iOS zoom on inputs */
+    input, select, textarea { font-size: 16px !important; }
+
+    /* Sticky header backdrop */
+    #sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(15, 32, 68, 0.97);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Tab buttons */
+    .tab-btn {
+      transition: all 0.22s ease;
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.01em;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+    }
+    .tab-btn.active {
+      background: rgba(255,255,255,0.13);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+
+    /* Card style */
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 2px 12px rgba(15,32,68,0.07), 0 1px 3px rgba(15,32,68,0.05);
+      padding: 20px;
+    }
+
+    /* Metric pill */
+    .metric-pill {
+      background: #f0f4f9;
+      border-radius: 14px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    /* Label */
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #7a8fa8;
+      margin-bottom: 5px;
+    }
+
+    /* Input field */
+    .field-input {
+      width: 100%;
+      border: 1.5px solid #dde4ee;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 16px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      color: #0f2044;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .field-input:focus { border-color: #4169a0; background: #fafcff; }
+
+    /* Read-only computed field */
+    .field-computed {
+      width: 100%;
+      border: 1.5px solid #e8edf5;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 16px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      color: #4a5568;
+      background: #f5f7fb;
+      pointer-events: none;
+    }
+
+    /* Big cashflow display */
+    #cashflow-display {
+      font-size: clamp(36px, 10vw, 52px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      transition: color 0.3s;
+    }
+    .positive { color: #059669; }
+    .negative { color: #c0392b; }
+
+    /* Notaire info text */
+    #notaire-detail {
+      font-size: 12px;
+      color: #7a8fa8;
+      line-height: 1.6;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Range slider — occupation */
+    .range-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 6px;
+      background: #dde4ee;
+      outline: none;
+      cursor: pointer;
+    }
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #0f2044;
+      box-shadow: 0 2px 8px rgba(15,32,68,0.28);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .range-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
+    .range-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #0f2044;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Box card */
+    .box-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 1px 8px rgba(15,32,68,0.06);
+      margin-bottom: 10px;
+    }
+
+    /* Occupation badge */
+    .occ-badge {
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'DM Mono', monospace;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: #e8edf5;
+      color: #0f2044;
+    }
+
+    /* CTA button */
+    .cta-btn {
+      display: block;
+      width: 100%;
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: #0f2044;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      box-shadow: 0 4px 20px rgba(15,32,68,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cta-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 2px 10px rgba(15,32,68,0.2);
+    }
+
+    /* Section separator */
+    .section-sep {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #dde4ee 20%, #dde4ee 80%, transparent);
+      margin: 18px 0;
+    }
+
+    /* Scrollbar hidden */
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; }
+  </style>
+</head>
+
+<body class="pb-8">
+
+  <!-- ══════════════════════════════════════════════
+       STICKY HEADER — navigation entre onglets
+  ══════════════════════════════════════════════ -->
+  <div id="sticky-header" class="px-4 py-3">
+    <!-- Logo / Titre -->
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <span class="text-white font-bold text-lg tracking-tight">LG Box</span>
+        <span class="text-white/40 text-sm ml-2">Simulateur</span>
+      </div>
+      <div class="text-white/30 text-xs font-mono">Hors TVA</div>
+    </div>
+    <!-- Tabs -->
+    <div class="flex gap-2 bg-white/5 rounded-xl p-1">
+      <button class="tab-btn active" id="btn-tresorerie" onclick="switchTab('tresorerie')">
+        📊 Trésorerie
+      </button>
+      <button class="tab-btn" id="btn-vacances" onclick="switchTab('vacances')">
+        🏠 Vacances locatives
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ONGLET 1 — TRÉSORERIE
+  ══════════════════════════════════════════════ -->
+  <div id="tab-tresorerie" class="px-4 pt-4 space-y-4">
+
+    <!-- 1. CARTE : Bilan Cash-Flow -->
+    <div class="card">
+      <p class="field-label mb-1">Cash-Flow Net Annuel</p>
+      <div id="cashflow-display" class="positive mb-3">—</div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="metric-pill">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">Point Mort (CA)</p>
+          <p id="pointmort-display" class="font-mono font-semibold text-navy text-sm">—</p>
         </div>
-        <div class="flex border-t border-blue-800">
-            <button onclick="switchTab('tresorerie')" id="btn-tresorerie" class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider border-b-4 border-blue-400 bg-blue-800">Trésorerie</button>
-            <button onclick="switchTab('vacance')" id="btn-vacance" class="flex-1 py-3 text-sm font-semibold transition-colors duration-200 uppercase tracking-wider border-b-4 border-transparent">Vacances</button>
+        <div class="metric-pill">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">Mensualité Prêt</p>
+          <p id="mensualite-display" class="font-mono font-semibold text-navy text-sm">—</p>
         </div>
+      </div>
     </div>
 
-    <div class="p-4 max-w-lg mx-auto">
-        
-        <div id="tab-tresorerie">
-            
-            <div class="bg-white rounded-2xl shadow-lg p-5 mb-6 border border-gray-100">
-                <h2 class="text-gray-500 text-sm font-semibold uppercase mb-1">Cash-Flow Net Annuel</h2>
-                <div id="out-cashflow" class="text-3xl font-extrabold text-green-600">0 €</div>
-                
-                <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
-                    <div>
-                        <div class="text-xs text-gray-500 uppercase">Point Mort (CA)</div>
-                        <div id="out-pointmort" class="font-bold text-gray-800">0 €</div>
-                    </div>
-                    <div>
-                        <div class="text-xs text-gray-500 uppercase">Mensualité Prêt</div>
-                        <div id="out-mensualite" class="font-bold text-gray-800">0 €</div>
-                    </div>
-                </div>
+    <!-- 2. CARTE : Acquisition -->
+    <div class="card">
+      <p class="text-xs font-bold uppercase tracking-widest text-navy/50 mb-4">Acquisition</p>
+
+      <div class="mb-4">
+        <label class="field-label" for="input-prix">Prix Net Vendeur</label>
+        <input
+          class="field-input"
+          id="input-prix"
+          type="number"
+          inputmode="numeric"
+          placeholder="800000"
+          value="800000"
+          min="0"
+          step="1000"
+        />
+        <!-- Détail frais notaire -->
+        <div id="notaire-detail" class="mt-2 p-3 bg-slate-50 rounded-xl hidden">
+          Calcul en cours…
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="field-label" for="input-apport">Apport Initial</label>
+        <input
+          class="field-input"
+          id="input-apport"
+          type="number"
+          inputmode="numeric"
+          placeholder="64000"
+          value="64000"
+          min="0"
+          step="1000"
+        />
+      </div>
+
+      <div>
+        <label class="field-label">Montant de l'Emprunt (calculé)</label>
+        <div class="field-computed" id="display-emprunt">—</div>
+      </div>
+    </div>
+
+    <!-- 3. CARTE : Paramètres du Crédit -->
+    <div class="card">
+      <p class="text-xs font-bold uppercase tracking-widest text-navy/50 mb-4">Crédit Immobilier</p>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="input-taux">Taux annuel (%)</label>
+          <input
+            class="field-input"
+            id="input-taux"
+            type="number"
+            inputmode="decimal"
+            placeholder="4.0"
+            value="4.0"
+            min="0"
+            max="30"
+            step="0.1"
+          />
+        </div>
+        <div>
+          <label class="field-label" for="input-duree">Durée (années)</label>
+          <input
+            class="field-input"
+            id="input-duree"
+            type="number"
+            inputmode="numeric"
+            placeholder="15"
+            value="15"
+            min="1"
+            max="30"
+            step="1"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. CARTE : Revenus & Charges -->
+    <div class="card">
+      <p class="text-xs font-bold uppercase tracking-widest text-navy/50 mb-4">Revenus & Charges d'exploitation</p>
+
+      <div class="mb-4">
+        <label class="field-label" for="input-ca">CA Annuel Global (HT)</label>
+        <input
+          class="field-input"
+          id="input-ca"
+          type="number"
+          inputmode="numeric"
+          placeholder="100000"
+          value="100000"
+          min="0"
+          step="500"
+        />
+      </div>
+
+      <div class="section-sep"></div>
+      <p class="text-xs font-semibold text-coral-strong uppercase tracking-widest mb-3">Charges d'exploitation</p>
+
+      <!-- Charges en grille 2 colonnes -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label" for="input-gestion">Frais de gestion</label>
+          <input class="field-input" id="input-gestion" type="number" inputmode="numeric" value="9500" min="0" step="100" />
+        </div>
+        <div>
+          <label class="field-label" for="input-travaux">Travaux & réparations</label>
+          <input class="field-input" id="input-travaux" type="number" inputmode="numeric" value="8000" min="0" step="100" />
+        </div>
+        <div>
+          <label class="field-label" for="input-impots">Impôts locaux</label>
+          <input class="field-input" id="input-impots" type="number" inputmode="numeric" value="1700" min="0" step="100" />
+        </div>
+        <div>
+          <label class="field-label" for="input-autres">Autres charges</label>
+          <input class="field-input" id="input-autres" type="number" inputmode="numeric" value="0" min="0" step="100" />
+        </div>
+      </div>
+
+      <div class="section-sep"></div>
+
+      <!-- Récap charges -->
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-semibold text-slate-500">Total charges exploit.</span>
+        <span id="total-charges-display" class="font-mono font-bold text-coral-strong text-sm">—</span>
+      </div>
+    </div>
+
+    <!-- 5. CARTE : Récapitulatif annuité -->
+    <div class="card">
+      <p class="text-xs font-bold uppercase tracking-widest text-navy/50 mb-3">Synthèse annuelle</p>
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-500">CA annuel</span>
+          <span id="synth-ca" class="font-mono font-semibold text-emerald-strong text-sm">—</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-500">Charges d'exploitation</span>
+          <span id="synth-charges" class="font-mono font-semibold text-coral-strong text-sm">—</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-500">Annuité emprunt</span>
+          <span id="synth-annuite" class="font-mono font-semibold text-coral-strong text-sm">—</span>
+        </div>
+        <div class="section-sep"></div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-bold text-navy">Cash-Flow Net</span>
+          <span id="synth-cf" class="font-mono font-bold text-sm">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-tresorerie -->
+
+
+  <!-- ══════════════════════════════════════════════
+       ONGLET 2 — VACANCES LOCATIVES
+  ══════════════════════════════════════════════ -->
+  <div id="tab-vacances" class="px-4 pt-4 space-y-4" style="display:none;">
+
+    <!-- Bloc CA Simulé (sticky visuel) -->
+    <div class="card" style="background: linear-gradient(135deg, #0f2044 0%, #1e3d7a 100%);">
+      <p class="text-white/50 text-xs font-bold uppercase tracking-widest mb-3">Stress-Test Occupation</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <p class="text-white/50 text-xs uppercase tracking-widest mb-1">CA Annuel Simulé</p>
+          <p id="vac-ca-annuel" class="text-white font-bold font-mono" style="font-size: clamp(20px, 6vw, 28px);">—</p>
+        </div>
+        <div>
+          <p class="text-white/50 text-xs uppercase tracking-widest mb-1">CA Mensuel</p>
+          <p id="vac-ca-mensuel" class="text-white font-bold font-mono" style="font-size: clamp(20px, 6vw, 28px);">—</p>
+        </div>
+      </div>
+      <!-- Barre de taux d'occupation global -->
+      <div class="mt-4">
+        <div class="flex justify-between mb-1">
+          <span class="text-white/50 text-xs">Taux d'occupation global</span>
+          <span id="vac-taux-global" class="text-white/80 text-xs font-mono font-semibold">—%</span>
+        </div>
+        <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div id="vac-bar" class="h-full rounded-full transition-all duration-300" style="width:100%; background: linear-gradient(90deg, #10b981, #059669);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des typologies de box -->
+    <div id="box-list"></div>
+
+    <!-- Bouton CTA -->
+    <button class="cta-btn" onclick="utiliserCaSimule()">
+      ✅ Utiliser ce CA pour la trésorerie
+    </button>
+
+    <div class="h-4"></div>
+
+  </div><!-- /tab-vacances -->
+
+
+  <!-- ══════════════════════════════════════════════
+       JAVASCRIPT — Logique métier
+  ══════════════════════════════════════════════ -->
+  <script>
+    /* ─────────────────────────────────────────
+       UTILITAIRES
+    ───────────────────────────────────────── */
+
+    // Formateur monétaire FR, 0 décimales
+    const euro = new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0
+    });
+
+    // Formateur monétaire avec décimales (pour détail notaire)
+    const euroDec = new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 2
+    });
+
+    // Lecture sécurisée d'un champ numérique (NaN → 0)
+    function readField(id) {
+      const v = parseFloat(document.getElementById(id).value);
+      return isNaN(v) ? 0 : v;
+    }
+
+    /* ─────────────────────────────────────────
+       CALCUL FRAIS DE NOTAIRE (Barème Finistère)
+    ───────────────────────────────────────── */
+    function calculerFraisNotaire(prix) {
+      if (prix <= 0) return { total: 0, detail: '' };
+
+      // 1. Droits d'enregistrement (Trésor Public)
+      const droits = prix * 0.0580665;
+
+      // 2. Contribution de Sécurité Immobilière
+      const csi = Math.max(prix * 0.001, 15);
+
+      // 3. Émoluments du notaire HT — Barème Macron dégressif
+      let emolHT = 0;
+      const tranches = [
+        { min: 0,      max: 6500,    rate: 0.03870 },
+        { min: 6501,   max: 17000,   rate: 0.01596 },
+        { min: 17001,  max: 60000,   rate: 0.01064 },
+        { min: 60001,  max: Infinity,rate: 0.00799 }
+      ];
+      for (const t of tranches) {
+        if (prix > t.min) {
+          const base = Math.min(prix, t.max) - t.min;
+          emolHT += base * t.rate;
+        }
+      }
+      const emolTTC = emolHT * 1.20; // TVA notaire 20 %
+
+      // 4. Débours forfaitaires
+      const debours = 1200;
+
+      // 5. Total
+      const total = droits + csi + emolTTC + debours;
+
+      // Détail textuel
+      const detail =
+        `Droits d'enregistrement : ${euroDec.format(droits)}\n` +
+        `CSI : ${euroDec.format(csi)}\n` +
+        `Émoluments TTC (Macron) : ${euroDec.format(emolTTC)}\n` +
+        `Débours & formalités : ${euroDec.format(debours)}\n` +
+        `────────────────────\n` +
+        `Total frais notaire : ${euro.format(Math.round(total))}`;
+
+      return { total, detail };
+    }
+
+    /* ─────────────────────────────────────────
+       CALCUL MENSUALITÉ (annuités constantes)
+    ───────────────────────────────────────── */
+    function calculerMensualite(capital, tauxAnnuel, dureeAns) {
+      if (capital <= 0 || dureeAns <= 0) return 0;
+      const r = (tauxAnnuel / 100) / 12;
+      const n = dureeAns * 12;
+      if (r === 0) return capital / n; // taux 0 %
+      return (capital * r) / (1 - Math.pow(1 + r, -n));
+    }
+
+    /* ─────────────────────────────────────────
+       ONGLET 1 : MISE À JOUR TRÉSORERIE
+    ───────────────────────────────────────── */
+    function updateTresorerie() {
+      // ── Lecture des champs ──
+      const prix    = readField('input-prix');
+      const apport  = readField('input-apport');
+      const taux    = readField('input-taux');
+      const duree   = readField('input-duree');
+      const ca      = readField('input-ca');
+      const gestion = readField('input-gestion');
+      const travaux = readField('input-travaux');
+      const impots  = readField('input-impots');
+      const autres  = readField('input-autres');
+
+      // ── Frais de notaire ──
+      const notaire = calculerFraisNotaire(prix);
+
+      // Affichage détail notaire
+      const notaireDiv = document.getElementById('notaire-detail');
+      if (prix > 0) {
+        notaireDiv.classList.remove('hidden');
+        notaireDiv.style.whiteSpace = 'pre-line';
+        notaireDiv.textContent = notaire.detail;
+      } else {
+        notaireDiv.classList.add('hidden');
+      }
+
+      // ── Emprunt ──
+      const totalDecaisser = prix + notaire.total;
+      const emprunt = Math.max(totalDecaisser - apport, 0);
+      document.getElementById('display-emprunt').textContent = euro.format(Math.round(emprunt));
+
+      // ── Mensualité & annuité ──
+      const mensualite = calculerMensualite(emprunt, taux, duree);
+      const annuite    = mensualite * 12;
+
+      // ── Charges ──
+      const totalCharges = gestion + travaux + impots + autres;
+
+      // ── Cash-Flow & Point Mort ──
+      const cashflow  = ca - totalCharges - annuite;
+      const pointmort = totalCharges + annuite;
+
+      // ── Mise à jour affichage ──
+
+      // Grand chiffre Cash-Flow
+      const cfDisplay = document.getElementById('cashflow-display');
+      cfDisplay.textContent = euro.format(Math.round(cashflow));
+      cfDisplay.className = cashflow >= 0 ? 'positive' : 'negative';
+
+      document.getElementById('pointmort-display').textContent    = euro.format(Math.round(pointmort));
+      document.getElementById('mensualite-display').textContent   = euro.format(Math.round(mensualite));
+      document.getElementById('total-charges-display').textContent = euro.format(Math.round(totalCharges));
+
+      // Synthèse
+      document.getElementById('synth-ca').textContent      = euro.format(Math.round(ca));
+      document.getElementById('synth-charges').textContent = euro.format(Math.round(totalCharges));
+      document.getElementById('synth-annuite').textContent = euro.format(Math.round(annuite));
+
+      const synthCf = document.getElementById('synth-cf');
+      synthCf.textContent  = euro.format(Math.round(cashflow));
+      synthCf.className    = cashflow >= 0
+        ? 'font-mono font-bold text-sm positive'
+        : 'font-mono font-bold text-sm negative';
+    }
+
+    /* ─────────────────────────────────────────
+       ONGLET 2 : DONNÉES DES BOX
+    ───────────────────────────────────────── */
+    const BOXES = [
+      { label: 'Box  2 m²',  max: 1,  prix: 45,  defaut: 1  },
+      { label: 'Box  5 m²',  max: 6,  prix: 100, defaut: 6  },
+      { label: 'Box  6 m²',  max: 5,  prix: 100, defaut: 5  },
+      { label: 'Box  8 m²',  max: 7,  prix: 120, defaut: 7  },
+      { label: 'Box 12 m²',  max: 20, prix: 140, defaut: 20 },
+      { label: 'Box 15 m²',  max: 8,  prix: 160, defaut: 8  },
+      { label: 'Box 18 m²',  max: 19, prix: 180, defaut: 19 },
+      { label: 'Box 20 m²',  max: 1,  prix: 200, defaut: 1  },
+    ];
+    // Vérification : sum(max * prix) * 12 = CA max = 116 220 €
+    // = (1×45 + 6×100 + 5×100 + 7×120 + 20×140 + 8×160 + 19×180 + 1×200) * 12
+    // = (45+600+500+840+2800+1280+3420+200)*12 = 9685 * 12 = 116 220 ✓
+
+    /* ─────────────────────────────────────────
+       INITIALISER LES CARTES DE BOX
+    ───────────────────────────────────────── */
+    function initBoxList() {
+      const container = document.getElementById('box-list');
+      container.innerHTML = '';
+
+      BOXES.forEach((box, i) => {
+        const card = document.createElement('div');
+        card.className = 'box-card';
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="font-bold text-navy text-sm">${box.label}</span>
+              <span class="ml-2 text-xs font-mono text-slate-400">${box.prix} €/mois</span>
             </div>
+            <div class="flex items-center gap-2">
+              <span class="occ-badge" id="badge-${i}"><span id="val-${i}">${box.defaut}</span>/${box.max}</span>
+              <span class="text-xs font-mono text-emerald-strong font-semibold" id="pct-${i}">${Math.round(box.defaut/box.max*100)}%</span>
+            </div>
+          </div>
+          <input
+            type="range"
+            class="range-slider"
+            id="slider-${i}"
+            min="0"
+            max="${box.max}"
+            value="${box.defaut}"
+            step="1"
+            oninput="onSlider(${i})"
+          />
+          <div class="flex justify-between mt-2">
+            <span class="text-xs text-slate-300">0</span>
+            <span class="text-xs font-mono text-slate-500 font-semibold" id="revenu-${i}">${euro.format(box.defaut * box.prix)}/mois</span>
+            <span class="text-xs text-slate-300">${box.max}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
 
-            <div class="space-y-4">
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-2 gap-4">
-                    <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Prix d'acquisition (€)</label>
-                        <input type="number" inputmode="numeric" id="in-prix" value="864000" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                    </div>
-                    
-                    <div class="col-span-2">
-                        <div class="flex justify-between items-end mb-1">
-                            <label class="block text-sm font-medium text-gray-700">Frais de notaire (Calcul légal)</label>
-                        </div>
-                        <div id="out-notaire" class="w-full bg-blue-50 border border-blue-200 rounded-lg p-3 text-lg font-bold text-blue-800">0 €</div>
-                        <p id="notaire-detail" class="text-xs text-gray-500 mt-1"></p>
-                    </div>
+      updateVacances();
+    }
 
-                    <div>
-                        <label
+    /* ─────────────────────────────────────────
+       MISE À JOUR SLIDER BOX
+    ───────────────────────────────────────── */
+    function onSlider(i) {
+      const slider = document.getElementById(`slider-${i}`);
+      const val    = parseInt(slider.value);
+      const box    = BOXES[i];
+
+      document.getElementById(`val-${i}`).textContent    = val;
+      document.getElementById(`pct-${i}`).textContent    = Math.round(val / box.max * 100) + '%';
+      document.getElementById(`revenu-${i}`).textContent = euro.format(val * box.prix) + '/mois';
+
+      updateVacances();
+    }
+
+    /* ─────────────────────────────────────────
+       MISE À JOUR TOTAUX VACANCES
+    ───────────────────────────────────────── */
+    function updateVacances() {
+      let caMensuel = 0;
+      let totalLoues = 0;
+      let totalMax   = 0;
+
+      BOXES.forEach((box, i) => {
+        const val = parseInt(document.getElementById(`slider-${i}`)?.value ?? box.defaut);
+        caMensuel  += val * box.prix;
+        totalLoues += val;
+        totalMax   += box.max;
+      });
+
+      const caAnnuel = caMensuel * 12;
+      const tauxGlobal = totalMax > 0 ? Math.round(totalLoues / totalMax * 100) : 0;
+
+      document.getElementById('vac-ca-annuel').textContent  = euro.format(caAnnuel);
+      document.getElementById('vac-ca-mensuel').textContent = euro.format(caMensuel);
+      document.getElementById('vac-taux-global').textContent = tauxGlobal + '%';
+      document.getElementById('vac-bar').style.width = tauxGlobal + '%';
+
+      // Couleur barre selon taux
+      const bar = document.getElementById('vac-bar');
+      if (tauxGlobal >= 80) {
+        bar.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+      } else if (tauxGlobal >= 50) {
+        bar.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+      } else {
+        bar.style.background = 'linear-gradient(90deg, #f05c54, #c0392b)';
+      }
+
+      // Stocker pour transfert
+      window._caSimule = caAnnuel;
+    }
+
+    /* ─────────────────────────────────────────
+       BOUTON CTA : Injecter CA simulé → Onglet 1
+    ───────────────────────────────────────── */
+    function utiliserCaSimule() {
+      const ca = window._caSimule || 0;
+      document.getElementById('input-ca').value = Math.round(ca);
+      switchTab('tresorerie');
+      updateTresorerie();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ─────────────────────────────────────────
+       NAVIGATION — TABS
+    ───────────────────────────────────────── */
+    function switchTab(tab) {
+      const tabs = ['tresorerie', 'vacances'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).style.display     = (t === tab) ? 'block' : 'none';
+        document.getElementById(`btn-${t}`).classList.toggle('active', t === tab);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ─────────────────────────────────────────
+       BIND EVENTS — Onglet 1
+    ───────────────────────────────────────── */
+    function bindInputs() {
+      const ids = [
+        'input-prix', 'input-apport', 'input-taux', 'input-duree',
+        'input-ca', 'input-gestion', 'input-travaux', 'input-impots', 'input-autres'
+      ];
+      ids.forEach(id => {
+        document.getElementById(id).addEventListener('input', updateTresorerie);
+      });
+    }
+
+    /* ─────────────────────────────────────────
+       INITIALISATION AU CHARGEMENT
+    ───────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      bindInputs();
+      initBoxList();      // Génère les cartes de box & calcule vacances
+      updateTresorerie(); // Calcule trésorerie avec valeurs par défaut
+    });
+  </script>
+
+</body>
+</html>
